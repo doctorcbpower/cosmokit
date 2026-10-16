@@ -2,3 +2,5 @@ build/
 build-mpi/
 __pycache__/
 *.pyc
+.DS_Store
+*.dSYM/

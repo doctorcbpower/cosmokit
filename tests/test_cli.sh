@@ -4,7 +4,7 @@
 set -e
 BUILD=${1:-build}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-DATA=$ROOT/../data/L20_N64.hdf5
+DATA=$ROOT/data/L20_N64.hdf5
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 ARGS="--input $DATA --nmesh 48 --scheme cic --velocity --nell 3"

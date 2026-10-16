@@ -1,87 +1,92 @@
-OPT += -DCIC
-#OPT += -DTSC
-OPT += -DLONGIDS
-OPT += -DCORRECT_SMOOTHING
-#OPT += -DVELOCITIES
-#OPT += -DIMAGE
-#OPT += -DDEBUG
-#OPT += -DENABLE_OPENMP
-OPT += -DENABLE_MPI
-#OPT += -DSCATTER_DECOMPOSITION
-#OPT += -DNONPERIODIC
-#OPT += -DKERNEL_SMOOTHING
-#OPT += -DSWIFT
+# cosmokit Makefile
+#
+#   make                 # serial + OpenMP build:  build/libcosmokit.{so,dylib}, build/cosmokit
+#   make MPI=1           # adds MPI:                build-mpi/...
+#   make OPENMP=0        # disable OpenMP
+#   make HDF5=0          # no HDF5 (no snapshot reader / field output)
+#   make test            # run the test-suite (needs numpy for the Python tests)
+#
+# Library locations are auto-detected from Homebrew (macOS) or taken from the
+# environment / command line:  FFTW_PREFIX=...  HDF5_PREFIX=...  GCC=...
 
-COMPILE_ON_SYSTEM="MacPro"
-#COMPILE_ON_SYSTEM="Magnus"
-#COMPILE_ON_SYSTEM="OzSTAR"
-#COMPILE_ON_SYSTEM="Gadi"
+OPENMP ?= 1
+MPI    ?= 0
+HDF5   ?= 1
+DEBUG  ?= 0
 
-ifeq ($(COMPILE_ON_SYSTEM),"OzSTAR")
-CC=mpicc
-FFTW_LIBS=${EBROOTFFTW}/lib
-FFTW_INCL=${EBROOTFFTW}/include
-FFTW_OPTS=-ldrfftw_mpi -ldrfftw -ldfftw_mpi -ldfftw -DDOUBLE_FFTW
-PNG_LIBS=/opt/local/lib
-PNG_INCL=/opt/local/include
-PNG_OPTS=-lpng
-HDF5_INCL=${EBROOTHDF5}/include -D H5_USE_16_API
-HDF5_LIBS=${EBROOTHDF5}/lib
-HDF5_OPTS=-lhdf5
-endif
+UNAME := $(shell uname -s)
+BREW  := $(shell brew --prefix 2>/dev/null)
+FFTW_PREFIX ?= $(if $(BREW),$(BREW),/usr)
+HDF5_PREFIX ?= $(if $(BREW),$(BREW),/usr)
 
-ifeq ($(COMPILE_ON_SYSTEM),"MacPro")
-CC=mpicc -g -fsanitize=address -fno-omit-frame-pointer -fsanitize-recover=address
-FFTW_LIBS=/opt/local/lib
-FFTW_INCL=/opt/local/include
-FFTW_OPTS=-ldrfftw_mpi -ldrfftw -ldfftw_mpi -ldfftw -DDOUBLE_FFTW
-PNG_LIBS=/usr/local/lib
-PNG_INCL=/usr/local/include
-PNG_OPTS=-lpng
-HDF5_INCL=/usr/local/include -D H5_USE_16_API
-HDF5_LIBS=/usr/local/lib
-HDF5_OPTS=-lhdf5 -lz
-endif
+# Apple clang has no OpenMP, so prefer a Homebrew GCC on macOS.
+GCC ?= $(or $(shell command -v gcc-15 2>/dev/null),$(shell command -v gcc-14 2>/dev/null),$(shell command -v gcc-13 2>/dev/null),gcc)
 
-ifeq ($(COMPILE_ON_SYSTEM),"Magnus")
-CC=cc
-FFTW_LIBS=${FFTW_DIR}
-FFTW_INCL=${FFTW_INC}
-FFTW_OPTS=-ldrfftw_mpi -ldfftw_mpi -ldrfftw -ldfftw -DDOUBLE_FFTW
-PNG_LIBS=
-PNG_INCL=
-PNG_OPTS=
-HDF5_INCL=${HDF5_DIR}/include
-HDF5_LIBS=${HDF5_DIR}/lib
-HDF5_OPTS=-lhdf5
-endif
-
-ifeq ($(COMPILE_ON_SYSTEM),"Gadi")
-CC=mpicc
-FFTW_LIBS=${HOME}/lib
-FFTW_INCL=${HOME}/include
-FFTW_OPTS=-ldrfftw_mpi -ldfftw_mpi -ldrfftw -ldfftw -DDOUBLE_FFTW
-PNG_LIBS=
-PNG_INCL=
-PNG_OPTS=
-HDF5_INCL=${HDF5_DIR}/include -DH5_USE_16_API
-HDF5_LIBS=${HDF5_DIR}/lib
-HDF5_OPTS=-lhdf5
-endif
-
-
-OPTS=-lm $(OPT) $(PNG_OPTS) $(HDF5_OPTS)
-
-measure_power_spectrum.exe : measure_power_spectrum.c header.c io.c split_across_processors.c assignment_to_mesh.c assign_velocities_to_mesh.c calculate_spectrum.c
-ifneq (,$(findstring "magnus",$(shell uname -n)))
-	$(CC) -o measure_power_spectrum.exe -I$(FFTW_INCL) -I$(HDF5_INCL) -I$(PNG_INCL) measure_power_spectrum.c io.c header.c split_across_processors.c assignment_to_mesh.c assign_velocities_to_mesh.c calculate_spectrum.c -L$(FFTW_LIBS) $(FFTW_OPTS) -L$(PNG_LIBS)  -L$(HDF5_LIBS) $(OPTS) 
+ifeq ($(MPI),1)
+  CC := mpicc
+  export OMPI_CC := $(GCC)
+  export MPICH_CC := $(GCC)
+  BUILD ?= build-mpi
 else
-	$(CC) -o measure_power_spectrum.exe -I$(FFTW_INCL) -I$(HDF5_INCL) measure_power_spectrum.c io.c header.c split_across_processors.c assignment_to_mesh.c assign_velocities_to_mesh.c calculate_spectrum.c -L$(FFTW_LIBS) $(FFTW_OPTS) -L$(HDF5_LIBS) $(OPTS) 
+  CC := $(GCC)
+  BUILD ?= build
 endif
 
-render_image.exe : render_image.c io.c find_neighbours.c make_tree.c walk_tree.c kernels.c split_across_tasks.c select_particles.c header.c smooth_to_mesh.c write_to_ppm.c
-	mpicc -Xpreprocessor -fopenmp -o render_image2.exe -g $(OPTS) -I$(FFTW_INCL) -I$(HDF5_INCL) -I$(PNG_INCL) render_image.c io.c find_neighbours.c make_tree.c walk_tree.c kernels.c split_across_tasks.c select_particles.c header.c smooth_to_mesh.c write_to_ppm.c -L$(FFTW_LIBS) $(FFTW_OPTS) -L$(HDF5_LIBS) $(HDF5_OPTS) -L$(PNG_LIBS) $(PNG_OPTS) -lomp
+ifeq ($(UNAME),Darwin)
+  SOEXT := dylib
+  SHFLAGS := -dynamiclib -install_name @rpath/libcosmokit.$(SOEXT)
+else
+  SOEXT := so
+  SHFLAGS := -shared
+endif
 
-clean: 
-	rm measure_power_spectrum.exe
-	touch Makefile
+CFLAGS  ?= -O3 -std=gnu11 -fPIC -Wall -Wextra -Wno-unused-parameter
+ifeq ($(DEBUG),1)
+  CFLAGS := -O0 -g -std=gnu11 -fPIC -Wall -Wextra -Wno-unused-parameter -fsanitize=address
+endif
+CFLAGS  += -Iinclude -Isrc -I$(FFTW_PREFIX)/include
+LDLIBS  := -L$(FFTW_PREFIX)/lib -lfftw3
+
+ifeq ($(OPENMP),1)
+  CFLAGS += -fopenmp -DCK_ENABLE_OPENMP
+  LDLIBS += -lfftw3_omp
+endif
+ifeq ($(MPI),1)
+  CFLAGS += -DCK_ENABLE_MPI
+  LDLIBS += -lfftw3_mpi
+endif
+ifeq ($(HDF5),1)
+  CFLAGS += -DCK_ENABLE_HDF5 -I$(HDF5_PREFIX)/include
+  LDLIBS += -L$(HDF5_PREFIX)/lib -lhdf5
+endif
+LDLIBS += -lm
+
+LIBSRC := grid assign power tidal kdtree sph io io_hdf5 io_gadget
+LIBOBJ := $(addprefix $(BUILD)/,$(addsuffix .o,$(LIBSRC)))
+LIB    := $(BUILD)/libcosmokit.$(SOEXT)
+CLI    := $(BUILD)/cosmokit
+
+all: $(LIB) $(CLI)
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+$(BUILD)/%.o: src/%.c src/ck_internal.h include/cosmokit.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(LIB): $(LIBOBJ)
+	$(CC) $(CFLAGS) $(SHFLAGS) -o $@ $^ $(LDLIBS) -Wl,-rpath,$(FFTW_PREFIX)/lib
+
+$(CLI): src/cli.c $(LIB)
+	$(CC) $(CFLAGS) -o $@ src/cli.c -L$(BUILD) -lcosmokit $(LDLIBS) -Wl,-rpath,$(abspath $(BUILD))
+
+PYTHON ?= $(shell for p in python3.13 python3.12 python3.11 python3; do $$p -c 'import numpy' 2>/dev/null && { echo $$p; break; }; done)
+
+test: all
+	COSMOKIT_LIB=$(abspath $(LIB)) $(PYTHON) tests/test_core.py
+	sh tests/test_cli.sh $(abspath $(BUILD))
+
+clean:
+	rm -rf build build-mpi
+
+.PHONY: all test clean
