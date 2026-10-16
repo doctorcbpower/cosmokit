@@ -3,7 +3,6 @@
 C libraries (with a Python wrapper and a command-line driver) for large-volume
 N-body analysis: gridded fields, power spectra, tidal/velocity fields,
 neighbour search and density smoothing. OpenMP within a node, MPI across nodes.
-It replaces the original `compute_power_spectrum` code, which is preserved on the `legacy` branch.
 
 ## Build
 
