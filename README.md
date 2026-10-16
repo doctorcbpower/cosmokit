@@ -70,7 +70,3 @@ Arrays may be float32 or float64 `(N,3)`; they are passed to C without copying.
 * Verified: mass conservation, exact CIC weights across periodic boundaries, plane-wave amplitudes/power/multipoles, Poisson-noise removal for NGP/CIC/TSC, tidal tensor/shear/divergence/vorticity vs analytic fields, eigenvalues vs NumPy, kNN/radius vs brute force, SPH kernel normalisation, Gadget binary (formats 1 and 2, multi-file, mixed types, chunked, MPI) identical to HDF5, serial vs OpenMP vs 1–4 MPI ranks (bitwise-identical text output).
 * **Not yet:** OpenACC (loops are flat and atomic-free except the deposit, so the k-space kernels in `power.c`/`tidal.c` are the natural first targets); interlacing; float32 grids; MPI for `ck_assign_sph` and the kd-tree (both shared-memory only); MPI tested only on one machine with Open MPI, and the Python/mpi4py path is untested (no mpi4py installed).
 * Errors inside an MPI collective (e.g. unreadable file on one rank) abort the job in the CLI; library callers get an error code only on the failing rank.
-
-## Using it from imbas
-
-`ck_assign`/`ck_assign_sph`, `ck_kdtree_*` and `ck_sph_density` cover what imbas's `src/tree`, `src/sph` and CIC deposit do, with an MPI-aware CIC and a single header. Replacing imbas's copies with calls into `libcosmokit` is a follow-up and has not been done.
