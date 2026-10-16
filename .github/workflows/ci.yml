@@ -1,0 +1,24 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mpi: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make libfftw3-dev libfftw3-mpi-dev libhdf5-dev \
+            libopenmpi-dev openmpi-bin python3-numpy python3-h5py
+      - name: Build
+        run: make MPI=${{ matrix.mpi }}
+      - name: Smoke test
+        run: make MPI=${{ matrix.mpi }} smoke
+      - name: Full tests
+        run: make test MPI=${{ matrix.mpi }}
+        env:
+          OMPI_MCA_rmaps_base_oversubscribe: "1"
+          OMPI_ALLOW_RUN_AS_ROOT: "1"

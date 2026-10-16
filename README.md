@@ -10,7 +10,8 @@ It replaces the original `compute_power_spectrum` code, which is preserved on th
 ```bash
 make              # build/libcosmokit.dylib|so + build/cosmokit   (OpenMP)
 make MPI=1        # build-mpi/...                                 (OpenMP + MPI)
-make test         # analytic/brute-force tests + CLI/MPI consistency
+make smoke        # seconds: CLI + Python run on the sample snapshot and give sane output
+make test         # full suite: analytic/brute-force tests + CLI/MPI/Gadget consistency
 ```
 Options: `OPENMP=0`, `HDF5=0`, `DEBUG=1` (ASan), `FFTW_PREFIX=`, `HDF5_PREFIX=`, `GCC=`.
 Needs FFTW3 (with `fftw3_omp`, and `fftw3_mpi` for MPI) and optionally HDF5.

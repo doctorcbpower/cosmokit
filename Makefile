@@ -4,7 +4,8 @@
 #   make MPI=1           # adds MPI:                build-mpi/...
 #   make OPENMP=0        # disable OpenMP
 #   make HDF5=0          # no HDF5 (no snapshot reader / field output)
-#   make test            # run the test-suite (needs numpy for the Python tests)
+#   make smoke           # quick sanity check on the sample snapshot (seconds)
+#   make test            # run the full test-suite (needs numpy for the Python tests)
 #
 # Library locations are auto-detected from Homebrew (macOS) or taken from the
 # environment / command line:  FFTW_PREFIX=...  HDF5_PREFIX=...  GCC=...
@@ -82,6 +83,9 @@ $(CLI): src/cli.c $(LIB)
 
 PYTHON ?= $(shell for p in python3.13 python3.12 python3.11 python3; do $$p -c 'import numpy' 2>/dev/null && { echo $$p; break; }; done)
 
+smoke: all
+	sh tests/smoke.sh $(abspath $(BUILD))
+
 test: all
 	COSMOKIT_LIB=$(abspath $(LIB)) $(PYTHON) tests/test_core.py
 	sh tests/test_cli.sh $(abspath $(BUILD))
@@ -89,4 +93,4 @@ test: all
 clean:
 	rm -rf build build-mpi
 
-.PHONY: all test clean
+.PHONY: all smoke test clean
