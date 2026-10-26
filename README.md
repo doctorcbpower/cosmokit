@@ -56,6 +56,16 @@ rho, h    = ck.KDTree(pos, boxsize=100.0).sph_density(mass, nngb=64)
 ```
 Arrays may be float32 or float64 `(N,3)`; they are passed to C without copying.
 
+## Projections
+
+`cosmokit.backend.CosmokitBackend` is a deposit backend for `analysistools.projection`, the shared SPH projection layer (kNN smoothing lengths, SPH density, weighted/periodic/face-on-edge-on projections). `cosmokit.projection` holds thin wrappers that default to it:
+
+```python
+import cosmokit.projection as cp                       # needs AnalysisTools importable
+m = cp.project(pos, mass, half_extent=15.0, npix=256, boxsize=100.0)   # -> Map (image, extent, kind)
+```
+The mesh is a padded periodic cube with isotropic cells (memory ~`nmesh³` doubles; it raises above 4 GiB), so for thin slabs or very large `npix` use the `numba` backend instead.
+
 ## Conventions
 
 * Cell `i` spans `[i,i+1)·L/N` (value at the cell centre); positions are wrapped periodically.
